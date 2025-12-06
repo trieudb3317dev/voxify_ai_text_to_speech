@@ -6,3 +6,6 @@
 /.env
 /data/
 *.index
+
+# GitHub Actions (giữ lại workflows)
+# .github/workflows/ được commit

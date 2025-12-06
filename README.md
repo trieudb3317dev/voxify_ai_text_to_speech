@@ -221,6 +221,78 @@ curl http://localhost:8000/docs
 - **Disk**: Sử dụng Persistent Disk để lưu index files
 - **Auto-deploy**: Render tự động deploy khi có commit mới (nếu bật)
 
+## 🔄 GitHub Actions CI/CD
+
+Dự án đã được cấu hình với GitHub Actions để tự động:
+
+### Workflows có sẵn:
+
+1. **CI/CD Pipeline** (`.github/workflows/ci.yml`)
+   - Chạy tests và linting
+   - Build Docker image
+   - Push lên GitHub Container Registry
+   - Security scanning với Trivy
+   - Deploy tự động lên Render (nếu cấu hình)
+
+2. **Docker Build** (`.github/workflows/docker-build.yml`)
+   - Build và push Docker image
+   - Hỗ trợ multi-platform (amd64, arm64)
+   - Tự động tag theo version, branch, commit SHA
+
+3. **Render Deploy** (`.github/workflows/render-deploy.yml`)
+   - Deploy tự động lên Render khi push vào main/master
+   - Health check sau khi deploy
+   - Hỗ trợ manual trigger với environment selection
+
+4. **Tests** (`.github/workflows/test.yml`)
+   - Chạy tests trên nhiều Python versions (3.11, 3.12)
+   - Test trên Ubuntu và Windows
+   - Kiểm tra imports và API initialization
+
+### Cấu hình GitHub Secrets:
+
+Để sử dụng đầy đủ tính năng, cần thêm các secrets sau trong GitHub repository:
+
+**Settings → Secrets and variables → Actions → New repository secret**
+
+1. **Render Deployment** (nếu muốn auto-deploy):
+   ```
+   RENDER_API_KEY=your_render_api_key
+   RENDER_SERVICE_ID=your_service_id
+   RENDER_SERVICE_URL=https://your-app.onrender.com
+   ```
+
+2. **Docker Hub** (optional, nếu muốn push lên Docker Hub):
+   ```
+   DOCKER_USERNAME=your_dockerhub_username
+   DOCKER_PASSWORD=your_dockerhub_password
+   ```
+
+### Cách lấy Render API Key:
+
+1. Đăng nhập [Render Dashboard](https://dashboard.render.com)
+2. Vào **Account Settings** → **API Keys**
+3. Tạo API key mới
+4. Copy và thêm vào GitHub Secrets
+
+### Cách lấy Render Service ID:
+
+1. Vào service trên Render Dashboard
+2. Service ID sẽ hiển thị trong URL: `https://dashboard.render.com/web/{SERVICE_ID}`
+3. Hoặc vào Settings → Service ID
+
+### Trigger workflows:
+
+- **Tự động**: Khi push code vào `main`/`master` branch
+- **Manual**: Vào **Actions** tab → Chọn workflow → **Run workflow**
+- **Pull Request**: Tự động chạy tests khi có PR
+
+### Xem kết quả:
+
+- Vào tab **Actions** trên GitHub repository
+- Xem logs và kết quả của từng workflow run
+- Docker images sẽ được push lên: `ghcr.io/your-username/recipe-chatbot-api`
+
 ## 🔌 API Endpoints
 
 Sau khi server chạy, truy cập:
@@ -342,6 +414,12 @@ recipe_chatbot_agent/
 ├── docker-entrypoint.sh    # Docker startup script
 ├── render.yaml             # Render.com deployment config
 ├── .dockerignore           # Docker ignore patterns
+├── .github/
+│   └── workflows/          # GitHub Actions workflows
+│       ├── ci.yml          # Main CI/CD pipeline
+│       ├── docker-build.yml # Docker build & push
+│       ├── render-deploy.yml # Render deployment
+│       └── test.yml        # Test suite
 ├── recipes.json            # Dữ liệu recipes (input)
 ├── docs.jsonl              # Dữ liệu đã chuẩn hóa (output)
 ├── data/                   # Thư mục lưu index (Docker/Render)
