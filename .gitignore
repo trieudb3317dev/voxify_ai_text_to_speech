@@ -4,3 +4,5 @@
 /meta.json
 /docs.jsonl
 /.env
+/data/
+*.index

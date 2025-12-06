@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  recipe-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: recipe-chatbot-api
+    ports:
+      - "8000:8000"
+    environment:
+      - VECTOR_INDEX_PATH=/app/data/out.index
+      - VECTOR_META_PATH=/app/data/meta.json
+      - EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
+    volumes:
+      # Mount data directory để persist index files
+      - ./data:/app/data
+      # Optional: mount recipes.json nếu muốn prepare data
+      - ./recipes.json:/app/recipes.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/docs', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+

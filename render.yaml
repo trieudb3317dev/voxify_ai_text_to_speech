@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: recipe-chatbot-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn serve_vector:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VECTOR_INDEX_PATH
+        value: /opt/render/project/src/data/out.index
+      - key: VECTOR_META_PATH
+        value: /opt/render/project/src/data/meta.json
+      - key: EMBED_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: PORT
+        fromService:
+          type: web
+          name: recipe-chatbot-api
+          property: port
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    # Disk để lưu index files (persistent storage)
+    # Lưu ý: Disk phải được tạo thủ công trên Render Dashboard
+    # Settings → Disks → Add Disk
+    # Mount path: /opt/render/project/src/data
+    # Size: 1GB hoặc lớn hơn

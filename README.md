@@ -101,6 +101,126 @@ uvicorn serve_vector:app --host 0.0.0.0 --port 8000
 uvicorn serve_vector:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## 🐳 Docker Deployment
+
+### Chạy với Docker
+
+#### Build và chạy image:
+
+```bash
+# Build image
+docker build -t recipe-chatbot-api .
+
+# Chạy container
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -e VECTOR_INDEX_PATH=/app/data/out.index \
+  -e VECTOR_META_PATH=/app/data/meta.json \
+  --name recipe-api \
+  recipe-chatbot-api
+```
+
+#### Hoặc sử dụng Docker Compose:
+
+```bash
+# Tạo thư mục data nếu chưa có
+mkdir -p data
+
+# Chạy với docker-compose
+docker-compose up -d
+
+# Xem logs
+docker-compose logs -f
+
+# Dừng
+docker-compose down
+```
+
+**Lưu ý:**
+- Thư mục `data/` sẽ được mount để lưu trữ index files
+- Nếu chưa có index, bạn có thể tạo qua endpoint `/train` sau khi container chạy
+- Hoặc copy `out.index` và `meta.json` vào thư mục `data/` trước khi chạy
+
+### Build và test Docker image:
+
+```bash
+# Build
+docker build -t recipe-chatbot-api .
+
+# Test locally
+docker run -p 8000:8000 recipe-chatbot-api
+
+# Kiểm tra health
+curl http://localhost:8000/docs
+```
+
+## ☁️ Deploy lên Render
+
+### Cách 1: Sử dụng render.yaml (Khuyến nghị)
+
+1. **Push code lên GitHub/GitLab**
+   ```bash
+   git add .
+   git commit -m "Add Docker and Render config"
+   git push origin main
+   ```
+
+2. **Tạo service trên Render:**
+   - Đăng nhập [Render Dashboard](https://dashboard.render.com)
+   - Chọn "New" → "Blueprint"
+   - Connect repository
+   - Render sẽ tự động detect `render.yaml` và deploy
+
+3. **Cấu hình Environment Variables** (nếu cần):
+   - `VECTOR_INDEX_PATH`: `/opt/render/project/src/data/out.index`
+   - `VECTOR_META_PATH`: `/opt/render/project/src/data/meta.json`
+   - `EMBED_MODEL`: `sentence-transformers/all-MiniLM-L6-v2`
+
+4. **Tạo index sau khi deploy:**
+   - Sau khi service chạy, gọi endpoint `/train` để tạo index:
+   ```bash
+   curl -X POST "https://your-app.onrender.com/train" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "source_url": "http://your-api.com/recipes/full-details",
+       "chunk_size": 1024
+     }'
+   ```
+
+### Cách 2: Deploy thủ công trên Render
+
+1. **Tạo Web Service:**
+   - Chọn "New" → "Web Service"
+   - Connect repository
+   - Cấu hình:
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `uvicorn serve_vector:app --host 0.0.0.0 --port $PORT`
+     - **Environment**: `Python 3`
+
+2. **Thêm Persistent Disk** (để lưu index):
+   - Settings → Disks → Add Disk
+   - Mount path: `/opt/render/project/src/data`
+   - Size: 1GB (hoặc lớn hơn tùy nhu cầu)
+
+3. **Environment Variables:**
+   ```
+   VECTOR_INDEX_PATH=/opt/render/project/src/data/out.index
+   VECTOR_META_PATH=/opt/render/project/src/data/meta.json
+   EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+   ```
+
+4. **Deploy và tạo index:**
+   - Sau khi deploy thành công, sử dụng endpoint `/train` để tạo index
+
+### Lưu ý khi deploy lên Render:
+
+- **Build time**: Lần đầu build có thể mất 5-10 phút do cài đặt dependencies
+- **Cold start**: Service có thể mất 30-60 giây để start lần đầu
+- **Memory**: Đảm bảo plan đủ RAM (tối thiểu 512MB, khuyến nghị 1GB+)
+- **Disk**: Sử dụng Persistent Disk để lưu index files
+- **Auto-deploy**: Render tự động deploy khi có commit mới (nếu bật)
+
 ## 🔌 API Endpoints
 
 Sau khi server chạy, truy cập:
@@ -217,10 +337,16 @@ recipe_chatbot_agent/
 ├── run.ps1                 # Script PowerShell tự động
 ├── translate_readme.py     # Script dịch README.md
 ├── requirements.txt        # Dependencies
+├── Dockerfile              # Docker image configuration
+├── docker-compose.yml      # Docker Compose configuration
+├── docker-entrypoint.sh    # Docker startup script
+├── render.yaml             # Render.com deployment config
+├── .dockerignore           # Docker ignore patterns
 ├── recipes.json            # Dữ liệu recipes (input)
 ├── docs.jsonl              # Dữ liệu đã chuẩn hóa (output)
-├── out.index               # FAISS index (output)
-├── meta.json               # Metadata (output)
+├── data/                   # Thư mục lưu index (Docker/Render)
+│   ├── out.index           # FAISS index (output)
+│   └── meta.json           # Metadata (output)
 └── README.md               # File này
 ```
 
