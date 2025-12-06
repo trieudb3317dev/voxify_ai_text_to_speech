@@ -1,0 +1,22 @@
+fastapi
+pydantic
+numpy
+sentence-transformers
+faiss-cpu; sys_platform != "win32"
+ollama
+requests
+faiss
+uvicorn
+
+langchain
+langchain-community
+langchain-groq
+langchain-core
+gpt4all
+langgraph
+chromadb
+sentence-transformers
+tavily-python
+gradio
+langchain-huggingface
+deep-translator
