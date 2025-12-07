@@ -1,0 +1,56 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build the Docker image with docker compose
+      run: docker compose -f docker-compose.prod.yml --profile prod build
+    
+    - name: List built images
+      run: docker images
+    
+    - name: Tag image for Docker Hub
+      run: |
+        # Find the image built by docker compose
+        IMAGE_ID=$(docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep "recipe-chatbot-api-prod:latest" | awk '{print $2}')
+        if [ -z "$IMAGE_ID" ]; then
+          echo "Image not found, trying alternative naming..."
+          IMAGE_ID=$(docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep "recipe-api-prod" | awk '{print $2}')
+        fi
+        if [ -z "$IMAGE_ID" ]; then
+          echo "❌ Image not found. Available images:"
+          docker images
+          exit 1
+        fi
+        echo "Found image ID: $IMAGE_ID"
+        docker tag $IMAGE_ID ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:latest
+        docker tag $IMAGE_ID ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:${{ github.sha }}
+        docker tag $IMAGE_ID ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:${{ github.ref_name }}
+        echo "✅ Images tagged successfully"
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Push Docker image to Docker Hub
+      run: |
+        echo "Pushing latest image to Docker Hub"
+        docker push ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:${{ github.sha }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/recipe-chatbot-api:${{ github.ref_name }}
+        echo "✅ All images pushed successfully"
+

@@ -1,118 +1,99 @@
-# GitHub Actions Workflows
+# GitHub Actions Workflow
 
-Dự án này sử dụng GitHub Actions để tự động hóa CI/CD pipeline.
+Dự án sử dụng GitHub Actions để tự động build và push Docker image lên Docker Hub.
 
-## 📋 Workflows Overview
+## 📋 Workflow Overview
 
-### 1. CI/CD Pipeline (`ci.yml`)
-Workflow chính chạy trên mỗi push và pull request:
-- ✅ Lint code với flake8
-- ✅ Check code formatting với black
-- ✅ Test imports
-- ✅ Build Docker image
-- ✅ Push lên GitHub Container Registry
-- ✅ Security scan với Trivy
-- ✅ Deploy lên Render (nếu cấu hình)
-
-### 2. Docker Build (`docker-build.yml`)
-Chuyên build và push Docker images:
-- Build multi-platform (amd64, arm64)
-- Tự động tag theo version, branch, commit
-- Push lên `ghcr.io`
-
-### 3. Render Deploy (`render-deploy.yml`)
-Deploy tự động lên Render:
-- Trigger khi push vào main/master
-- Hỗ trợ manual trigger với environment selection
-- Health check sau khi deploy
-
-### 4. Tests (`test.yml`)
-Chạy test suite:
-- Test trên nhiều Python versions (3.11, 3.12)
-- Test trên Ubuntu và Windows
-- Kiểm tra imports và API
+### Docker Deploy (`docker-deploy.yml`)
+Workflow đơn giản chạy khi push code vào `main`/`master` branch:
+- ✅ Build Docker image sử dụng `docker-compose.prod.yml`
+- ✅ Tag image với multiple tags (latest, commit SHA, branch name)
+- ✅ Push image lên Docker Hub
 
 ## 🚀 Quick Start
 
-### 1. Push code lên GitHub
+### 1. Cấu hình GitHub Secrets
+
+**Settings → Secrets and variables → Actions → New repository secret**
+
+Thêm các secrets sau:
+- `DOCKER_USERNAME`: Tên đăng nhập Docker Hub của bạn
+- `DOCKER_PASSWORD`: Access Token hoặc password Docker Hub
+
+### 2. Push code lên GitHub
+
 ```bash
 git add .
-git commit -m "Add GitHub Actions workflows"
+git commit -m "Add Docker workflow"
 git push origin main
 ```
 
-### 2. Xem workflows chạy
+### 3. Xem workflow chạy
+
 - Vào tab **Actions** trên GitHub repository
 - Xem logs và kết quả
 
-### 3. Cấu hình Secrets (Optional)
-
-Nếu muốn deploy tự động lên Render:
-
-1. Lấy Render API Key:
-   - Đăng nhập [Render Dashboard](https://dashboard.render.com)
-   - Account Settings → API Keys → Create API Key
-
-2. Lấy Service ID:
-   - Vào service trên Render
-   - Service ID trong URL: `dashboard.render.com/web/{SERVICE_ID}`
-
-3. Thêm vào GitHub Secrets:
-   - Repository → Settings → Secrets and variables → Actions
-   - Thêm các secrets:
-     - `RENDER_API_KEY`
-     - `RENDER_SERVICE_ID`
-     - `RENDER_SERVICE_URL`
-
 ## 📦 Docker Images
 
-Sau khi workflow chạy, Docker images sẽ được push lên:
+Sau khi workflow chạy thành công, Docker images sẽ được push lên:
+
 ```
-ghcr.io/your-username/recipe-chatbot-api:latest
-ghcr.io/your-username/recipe-chatbot-api:main-{sha}
+your-username/recipe-chatbot-api:latest
+your-username/recipe-chatbot-api:{commit-sha}
+your-username/recipe-chatbot-api:{branch-name}
 ```
 
-### Pull và chạy image:
+### Pull và chạy:
+
 ```bash
-docker pull ghcr.io/your-username/recipe-chatbot-api:latest
-docker run -p 8000:8000 ghcr.io/your-username/recipe-chatbot-api:latest
+# Pull latest
+docker pull your-username/recipe-chatbot-api:latest
+
+# Chạy container
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --name recipe-api \
+  your-username/recipe-chatbot-api:latest
 ```
 
 ## 🔧 Customization
 
 ### Thay đổi trigger branches:
-Sửa trong các workflow files:
+
+Sửa trong `docker-deploy.yml`:
 ```yaml
 on:
   push:
-    branches: [ main, master, develop ]  # Thêm branches bạn muốn
+    branches: [ "main", "master", "develop" ]  # Thêm branches bạn muốn
 ```
 
-### Thêm tests:
-Tạo file test trong thư mục `tests/` và workflow sẽ tự động chạy.
+### Thay đổi Docker Hub repository name:
 
-### Thay đổi Docker registry:
-Sửa `REGISTRY` và `IMAGE_NAME` trong `docker-build.yml`
+Sửa trong workflow file:
+```yaml
+docker tag $IMAGE_ID ${{ secrets.DOCKER_USERNAME }}/your-repo-name:latest
+```
 
 ## 🐛 Troubleshooting
 
 ### Workflow không chạy:
-- Kiểm tra file có đúng path: `.github/workflows/*.yml`
+- Kiểm tra file có đúng path: `.github/workflows/docker-deploy.yml`
 - Kiểm tra syntax YAML
 - Xem Actions tab để xem lỗi
 
 ### Docker build fail:
 - Kiểm tra Dockerfile syntax
 - Xem logs trong Actions để biết lỗi cụ thể
+- Đảm bảo `docker-compose.prod.yml` có đúng format
 
-### Render deploy fail:
+### Docker Hub push fail:
 - Kiểm tra secrets đã được thêm đúng chưa
-- Kiểm tra Service ID có đúng không
-- Xem Render dashboard để xem deployment status
+- Kiểm tra Docker Hub credentials có đúng không
+- Đảm bảo repository đã được tạo trên Docker Hub (hoặc sẽ tự động tạo)
 
 ## 📚 Resources
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Docker Build Push Action](https://github.com/docker/build-push-action)
-- [Render API Documentation](https://render.com/docs/api)
-
+- [Docker Hub Documentation](https://docs.docker.com/docker-hub/)

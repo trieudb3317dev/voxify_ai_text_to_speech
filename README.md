@@ -223,75 +223,61 @@ curl http://localhost:8000/docs
 
 ## 🔄 GitHub Actions CI/CD
 
-Dự án đã được cấu hình với GitHub Actions để tự động:
+Dự án đã được cấu hình với GitHub Actions để tự động build và push Docker image lên Docker Hub.
 
-### Workflows có sẵn:
+### Workflow:
 
-1. **CI/CD Pipeline** (`.github/workflows/ci.yml`)
-   - Chạy tests và linting
-   - Build Docker image
-   - Push lên GitHub Container Registry
-   - Security scanning với Trivy
-   - Deploy tự động lên Render (nếu cấu hình)
-
-2. **Docker Build** (`.github/workflows/docker-build.yml`)
-   - Build và push Docker image
-   - Hỗ trợ multi-platform (amd64, arm64)
-   - Tự động tag theo version, branch, commit SHA
-
-3. **Render Deploy** (`.github/workflows/render-deploy.yml`)
-   - Deploy tự động lên Render khi push vào main/master
-   - Health check sau khi deploy
-   - Hỗ trợ manual trigger với environment selection
-
-4. **Tests** (`.github/workflows/test.yml`)
-   - Chạy tests trên nhiều Python versions (3.11, 3.12)
-   - Test trên Ubuntu và Windows
-   - Kiểm tra imports và API initialization
+**Docker Deploy** (`.github/workflows/docker-deploy.yml`)
+- Tự động build Docker image khi push code vào `main`/`master` branch
+- Build image sử dụng `docker-compose.prod.yml` với profile `prod`
+- Tag image với: `latest`, commit SHA, và branch name
+- Push image lên Docker Hub
 
 ### Cấu hình GitHub Secrets:
 
-Để sử dụng đầy đủ tính năng, cần thêm các secrets sau trong GitHub repository:
+Để workflow hoạt động, cần thêm các secrets sau trong GitHub repository:
 
 **Settings → Secrets and variables → Actions → New repository secret**
 
-1. **Render Deployment** (nếu muốn auto-deploy):
-   ```
-   RENDER_API_KEY=your_render_api_key
-   RENDER_SERVICE_ID=your_service_id
-   RENDER_SERVICE_URL=https://your-app.onrender.com
-   ```
-
-2. **Docker Hub** (optional, nếu muốn push lên Docker Hub):
+1. **Docker Hub Credentials** (bắt buộc):
    ```
    DOCKER_USERNAME=your_dockerhub_username
    DOCKER_PASSWORD=your_dockerhub_password
    ```
 
-### Cách lấy Render API Key:
+### Cách lấy Docker Hub credentials:
 
-1. Đăng nhập [Render Dashboard](https://dashboard.render.com)
-2. Vào **Account Settings** → **API Keys**
-3. Tạo API key mới
-4. Copy và thêm vào GitHub Secrets
+1. Đăng nhập [Docker Hub](https://hub.docker.com)
+2. Vào **Account Settings** → **Security**
+3. Tạo Access Token mới (khuyến nghị) hoặc dùng password
+4. Thêm vào GitHub Secrets:
+   - `DOCKER_USERNAME`: Tên đăng nhập Docker Hub
+   - `DOCKER_PASSWORD`: Access Token hoặc password
 
-### Cách lấy Render Service ID:
-
-1. Vào service trên Render Dashboard
-2. Service ID sẽ hiển thị trong URL: `https://dashboard.render.com/web/{SERVICE_ID}`
-3. Hoặc vào Settings → Service ID
-
-### Trigger workflows:
+### Trigger workflow:
 
 - **Tự động**: Khi push code vào `main`/`master` branch
-- **Manual**: Vào **Actions** tab → Chọn workflow → **Run workflow**
-- **Pull Request**: Tự động chạy tests khi có PR
+- **Manual**: Vào **Actions** tab → Chọn "Docker Image CI" → **Run workflow**
 
 ### Xem kết quả:
 
 - Vào tab **Actions** trên GitHub repository
-- Xem logs và kết quả của từng workflow run
-- Docker images sẽ được push lên: `ghcr.io/your-username/recipe-chatbot-api`
+- Xem logs và kết quả của workflow run
+- Docker images sẽ được push lên: `your-username/recipe-chatbot-api`
+
+### Pull và chạy image từ Docker Hub:
+
+```bash
+# Pull latest image
+docker pull your-username/recipe-chatbot-api:latest
+
+# Chạy container
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --name recipe-api \
+  your-username/recipe-chatbot-api:latest
+```
 
 ## 🔌 API Endpoints
 
@@ -416,10 +402,8 @@ recipe_chatbot_agent/
 ├── .dockerignore           # Docker ignore patterns
 ├── .github/
 │   └── workflows/          # GitHub Actions workflows
-│       ├── ci.yml          # Main CI/CD pipeline
-│       ├── docker-build.yml # Docker build & push
-│       ├── render-deploy.yml # Render deployment
-│       └── test.yml        # Test suite
+│       └── docker-deploy.yml # Docker build & push to Docker Hub
+├── docker-compose.prod.yml  # Docker Compose config for production build
 ├── recipes.json            # Dữ liệu recipes (input)
 ├── docs.jsonl              # Dữ liệu đã chuẩn hóa (output)
 ├── data/                   # Thư mục lưu index (Docker/Render)

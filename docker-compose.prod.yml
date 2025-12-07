@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  recipe-api-prod:
+    profiles:
+      - prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: recipe-chatbot-api-prod:latest
+    container_name: recipe-chatbot-api-prod
+    environment:
+      - VECTOR_INDEX_PATH=/app/data/out.index
+      - VECTOR_META_PATH=/app/data/meta.json
+      - EMBED_MODEL=sentence-transformers/all-MiniLM-L6-v2
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3.2:latest
+
